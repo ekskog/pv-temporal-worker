@@ -1,0 +1,27 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@temporalio/activity": "^1.14.1",
+    "@temporalio/worker": "^1.14.1",
+    "@temporalio/workflow": "^1.14.1",
+    "minio": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/minio": "^7.1.0",
+    "@types/node": "^25.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

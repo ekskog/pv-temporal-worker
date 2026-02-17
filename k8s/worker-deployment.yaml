@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-image-worker
+  namespace: ut
+  labels:
+    app: temporal-image-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: temporal-image-worker
+  template:
+    metadata:
+      labels:
+        app: temporal-image-worker
+    spec:
+      hostAliases:
+      - ip: "192.168.1.8"
+        hostnames:
+        - "mjolnir"
+      containers:
+      - name: worker
+        image: ghcr.io/ekskog/ut-worker:main-d8fd5da
+        imagePullPolicy: Always
+        env:
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-frontend.temporal.svc.cluster.local:7233"
+        - name: TASK_QUEUE
+          value: "image-processing"
+        - name: AVIF_CONVERTER_URL
+          value: "http://avif-converter-service.photovault.svc.cluster.local:3000"
+        volumeMounts:
+        - name: nfs-storage
+          mountPath: /nfs-storage
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: nfs-storage
+        persistentVolumeClaim:
+          claimName: nfs-ut-claim

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: temporal-image-worker
-  namespace: ut
+  name: temporal-pv-worker
+  namespace: photovault
   labels:
-    app: temporal-image-worker
+    app: temporal-pv-worker
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: temporal-image-worker
+      app: temporal-pv-worker
   template:
     metadata:
       labels:
-        app: temporal-image-worker
+        app: temporal-pv-worker
     spec:
       hostAliases:
       - ip: "192.168.1.8"
@@ -21,7 +21,7 @@ spec:
         - "mjolnir"
       containers:
       - name: worker
-        image: ghcr.io/ekskog/ut-worker:main-d8fd5da
+        image: ghcr.io/ekskog/ut-pv-worker:main-d8fd5da
         imagePullPolicy: Always
         env:
         - name: TEMPORAL_ADDRESS
@@ -43,4 +43,4 @@ spec:
       volumes:
       - name: nfs-storage
         persistentVolumeClaim:
-          claimName: nfs-ut-claim
+          claimName: nfs-photovault-claim

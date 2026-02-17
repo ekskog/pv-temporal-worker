@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/ekskog/ut
+  IMAGE_PREFIX: ghcr.io/ekskog/pv
 
 jobs:
   build-worker:

@@ -21,7 +21,7 @@ async function run() {
   // Create worker
   const worker = await Worker.create({
     connection,
-    namespace: 'default',
+    namespace: 'photovault',
     taskQueue: TASK_QUEUE,
     workflowsPath: require.resolve('./workflows/image-batch-workflow'),
     activities: {

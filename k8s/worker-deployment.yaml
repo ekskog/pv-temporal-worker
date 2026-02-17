@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: temporal-pv-worker
+  name: pv-worker
   namespace: photovault
   labels:
-    app: temporal-pv-worker
+    app: pv-worker
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: temporal-pv-worker
+      app: pv-worker
   template:
     metadata:
       labels:
-        app: temporal-pv-worker
+        app: pv-worker
     spec:
       hostAliases:
       - ip: "192.168.1.8"
@@ -21,7 +21,7 @@ spec:
         - "mjolnir"
       containers:
       - name: worker
-        image: ghcr.io/ekskog/ut-pv-worker:main-d8fd5da
+        image: ghcr.io/ekskog/pv-worker:main-bb93786
         imagePullPolicy: Always
         env:
         - name: TEMPORAL_ADDRESS

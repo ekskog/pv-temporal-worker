@@ -1,5 +1,4 @@
 name: Build and Push Docker Images
-
 on:
   push:
     branches:
@@ -17,24 +16,24 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -44,7 +43,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-      
+
       - name: Build and push worker image
         uses: docker/build-push-action@v5
         with:
@@ -53,3 +52,53 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Set up KUBECONFIG
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig.yaml
+          echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
+
+          if [ ! -s kubeconfig.yaml ]; then
+            echo "ERROR: kubeconfig.yaml is empty!"
+            exit 1
+          fi
+
+          kubectl cluster-info --kubeconfig=kubeconfig.yaml
+
+      - name: Create or Update Image Pull Secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ github.actor }} \
+            --docker-password="${{ secrets.GITHUB_TOKEN }}" \
+            --namespace=photovault \
+            --kubeconfig=kubeconfig.yaml \
+            --dry-run=client -o yaml | kubectl apply -f - --kubeconfig=kubeconfig.yaml
+
+      - name: Deploy to k3s
+        run: |
+          # Extract the sha tag (main-<sha>) from the metadata output
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep 'main-' | head -1)
+          echo "🚀 Deploying image: $IMAGE_TAG"
+
+          kubectl set image deployment/pv-worker \
+            worker=$IMAGE_TAG \
+            --namespace=photovault \
+            --kubeconfig=kubeconfig.yaml
+
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/pv-worker \
+            --namespace=photovault \
+            --kubeconfig=kubeconfig.yaml \
+            --timeout=300s
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -l app=pv-worker -n photovault --kubeconfig=kubeconfig.yaml
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f kubeconfig.yaml

@@ -10,7 +10,7 @@ const minioClient = new Minio.Client({
   secretKey: process.env.MINIO_SECRET_KEY || 'lucaPWD4MinI0-MJR',
 });
 
-const DEFAULT_BUCKET = 'temporal';
+const DEFAULT_BUCKET = 'slask';
 
 /**
  * Moves the converted file from the NFS scratchpad to MinIO storage.
@@ -18,11 +18,11 @@ const DEFAULT_BUCKET = 'temporal';
 export async function persistToMinio(
   avifPath: string,
   filename: string,
-  batchId: string
+  folder: string
 ): Promise<{ minioPath: string }> {
   // Use path.parse to get the name without the extension (e.g., "003.JPG" -> "003")
   const fileNameWithoutExt = path.parse(filename).name;
-  const objectName = `${batchId}/${fileNameWithoutExt}.avif`;
+  const objectName = `${folder}/${fileNameWithoutExt}.avif`;
 
   try {
     const avifBuffer = await fs.readFile(avifPath);

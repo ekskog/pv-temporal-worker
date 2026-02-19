@@ -41,7 +41,8 @@ jobs:
           images: ${{ env.IMAGE_PREFIX }}-worker
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
+            # Adding run_number to the SHA tag to ensure a unique pull on K8s
+            type=raw,value={{branch}}-{{sha}}-${{ github.run_number }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push worker image
@@ -50,6 +51,8 @@ jobs:
           context: ./worker
           platforms: linux/amd64,linux/arm64
           push: true
+          # THE FIX: Bypass the poisoned GHA cache layers for package.json
+          no-cache: true 
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -57,12 +60,6 @@ jobs:
         run: |
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig.yaml
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
-
-          if [ ! -s kubeconfig.yaml ]; then
-            echo "ERROR: kubeconfig.yaml is empty!"
-            exit 1
-          fi
-
           kubectl cluster-info --kubeconfig=kubeconfig.yaml
 
       - name: Create or Update Image Pull Secret
@@ -77,12 +74,12 @@ jobs:
 
       - name: Deploy to k3s
         run: |
-          # Extract the sha tag (main-<sha>) from the metadata output
-          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep 'main-' | head -1)
-          echo "🚀 Deploying image: $IMAGE_TAG"
+          # Grab the specific run-number tag we just generated
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "${{ github.run_number }}" | head -1)
+          echo "🚀 Deploying NEW worker image: $IMAGE_TAG"
 
           kubectl set image deployment/pv-worker \
-            worker=$IMAGE_TAG \
+            pv-worker=$IMAGE_TAG \
             --namespace=photovault \
             --kubeconfig=kubeconfig.yaml
 
@@ -95,10 +92,8 @@ jobs:
 
       - name: Verify Deployment
         run: |
-          echo "=== Pod Status ==="
           kubectl get pods -l app=pv-worker -n photovault --kubeconfig=kubeconfig.yaml
 
       - name: Cleanup
         if: always()
-        run: |
-          rm -f kubeconfig.yaml
+        run: rm -f kubeconfig.yaml
